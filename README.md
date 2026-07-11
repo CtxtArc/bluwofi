@@ -1,5 +1,9 @@
 # bluwofi
 
+<p align="center">
+  <img src="assets/demo.gif" alt="bluwofi demo" width="800">
+</p>
+
 A minimal Bluetooth manager for Sway/wlroots, driven by a `wofi` popup menu.
 Talks directly to BlueZ over D-Bus using the `bluer` crate — no polkit
 agent or GTK dependency required.
