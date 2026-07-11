@@ -1,0 +1,13 @@
+[Unit]
+Description=Bluetooth auto-reconnect daemon
+After=bluetooth.target
+
+[Service]
+# Adjust this path to wherever you actually built the binary.
+# %h expands to your home directory.
+ExecStart=%h/coding/rust/bluetooth-wofi/target/release/bluetooth-reconnected
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
