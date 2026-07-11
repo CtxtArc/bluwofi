@@ -37,7 +37,7 @@ fn config_path() -> PathBuf {
             let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
             PathBuf::from(home).join(".config")
         });
-    base.join("bluetooth-wofi").join("config.toml")
+    base.join("bluwofi").join("config.toml")
 }
 
 /// Loads config.toml if present, falling back to defaults for anything
