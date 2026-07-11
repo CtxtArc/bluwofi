@@ -12,7 +12,7 @@ build:
 install: 
 	# Install binaries
 	install -Dm755 target/release/bluwofi $(DESTDIR)$(BINDIR)/bluwofi
-	install -Dm755 target/release/bluetooth-reconnected $(DESTDIR)$(BINDIR)/bluetooth-reconnected
+	install -Dm755 target/release/bluetooth-reconnectd $(DESTDIR)$(BINDIR)/bluetooth-reconnectd
 	# Install systemd user service system-wide
 	install -Dm644 systemd/bluetooth-reconnectd.service $(DESTDIR)$(SYSTEMD_USER_DIR)/bluetooth-reconnectd.service
 	@echo ""
@@ -44,7 +44,7 @@ install:
 
 uninstall:
 	rm -f $(DESTDIR)$(BINDIR)/bluwofi
-	rm -f $(DESTDIR)$(BINDIR)/bluetooth-reconnected
+	rm -f $(DESTDIR)$(BINDIR)/bluetooth-reconnectd
 	rm -f $(DESTDIR)$(SYSTEMD_USER_DIR)/bluetooth-reconnectd.service
 	@echo "Uninstalled successfully."
 

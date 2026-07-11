@@ -4,172 +4,293 @@
   <img src="assets/demo.gif" alt="bluwofi demo" width="800">
 </p>
 
-A minimal Bluetooth manager for Sway/wlroots, driven by a `wofi` popup menu.
-Talks directly to BlueZ over D-Bus using the `bluer` crate — no polkit
-agent or GTK dependency required.
+A small Bluetooth manager for Sway and wlroots-based desktops, using a
+`wofi` popup interface.
+
+`bluwofi` communicates directly with BlueZ over D-Bus through the
+[`bluer`](https://crates.io/crates/bluer) Rust crate. It does not require a
+GTK Bluetooth applet or a full desktop environment.
+
+## Features
+
+* `wofi` based Bluetooth management menu
+* Direct BlueZ D-Bus communication
+* Connect, disconnect, pair, and remove devices
+* Device discovery from the menu
+* Optional desktop notifications
+* Waybar status integration
+* Background auto-reconnect daemon
+* Small TOML configuration file
+
+## Requirements
+
+* `bluetoothd` running:
+
+```sh
+systemctl status bluetooth
+```
+
+* `wofi` installed and available in `$PATH`
+* `notify-send` (optional, provided by `libnotify` or a notification daemon
+  such as `mako`)
+* Rust toolchain (`rustup`)
+* `make`
+
+## Installation
+
+### From source
+
+Clone the repository:
+
+```sh
+git clone https://github.com/CtxtArc/bluwofi.git
+cd bluwofi
+```
+
+Build and install:
+
+```sh
+make
+sudo make install
+```
+
+By default, files are installed to:
+
+```text
+/usr/local/bin
+/usr/local/lib/systemd/user
+```
+
+You can change the installation prefix:
+
+```sh
+sudo make install PREFIX=/usr
+```
+
+For package maintainers, `DESTDIR` is supported:
+
+```sh
+make install DESTDIR=/tmp/package
+```
+
+The installed binaries are:
+
+```text
+bluwofi
+bluetooth-reconnectd
+```
+
+## Manual build
+
+If you only want to build without installing:
+
+```sh
+cargo build --release
+```
+
+The binaries will be located at:
+
+```text
+target/release/bluwofi
+target/release/bluetooth-reconnectd
+```
+
+## Uninstall
+
+Remove installed files:
+
+```sh
+sudo make uninstall
+```
 
 ## Configuration
 
-Optional config file at `~/.config/bluwofi/config.toml`. Every
-field is optional — omit any you don't want to override:
+Optional configuration file:
+
+```text
+~/.config/bluwofi/config.toml
+```
+
+All fields are optional. Missing values use the defaults below:
 
 ```toml
 # How long a manual "Scan for devices" stays open, in seconds.
 scan_duration_secs = 5
 
-# After you manually disconnect a device from the menu, how long
-# bluetooth-reconnectd leaves it alone before trying to reconnect, in
-# seconds.
+# After manually disconnecting a device, how long the reconnect daemon
+# waits before trying again.
 reconnect_cooldown_secs = 120
 
-# How often bluetooth-reconnectd sweeps for disconnected trusted
-# devices, in seconds.
+# Interval between reconnect daemon scans.
 daemon_poll_interval_secs = 20
 
-# Per-device connect() timeout during a daemon sweep, in seconds.
+# Timeout for individual connection attempts.
 daemon_connect_timeout_secs = 8
 ```
 
-No file, or a file missing some fields? Everything just falls back to
-the defaults shown above. Both `bluwofi` and `bluetooth-reconnectd`
-read the same file, so cooldown/timeout settings stay consistent between
-the interactive menu and the background daemon.
-
-## Requirements
-
-- `bluetoothd` (BlueZ) running (`systemctl status bluetooth`)
-- `wofi` installed and on `$PATH`
-- `notify-send` (usually provided by `libnotify` or a notification daemon like `mako` on sway) — optional, used for connect/disconnect/pair/error toasts. If missing, notifications are silently skipped.
-- Rust toolchain (`rustup`)
-
-## Build
-
-```sh
-cd bluwofi
-cargo build --release
-```
-
-The binary will be at `target/release/bluwofi`.
-
+Both `bluwofi` and `bluetooth-reconnectd` read the same configuration file.
 
 ## Usage
 
-Run it directly, or bind it to a key in your sway config:
+Run the menu:
 
+```sh
+bluwofi
 ```
-# ~/.config/sway/config
-bindsym $mod+b exec /path/to/bluwofi/target/release/bluwofi
-```
 
-Opening it shows:
-- A toggle for adapter power
-- "Scan for devices" (5 second discovery window, then reopens the menu)
-- Known/paired devices, sorted connected-first
+The main menu provides:
 
-Selecting a device opens a second menu with Connect / Disconnect /
-Pair & Connect / Remove, depending on its current state.
+* Bluetooth adapter power toggle
+* Device scanning
+* Known devices sorted with connected devices first
 
-Desktop notifications (via `notify-send`) fire on connect/disconnect/pair
-success and on errors. Disable them with:
+Selecting a device opens available actions:
+
+* Connect
+* Disconnect
+* Pair & Connect
+* Remove
+
+Notifications are shown for connection, disconnection, pairing, and errors.
+
+Disable notifications with:
 
 ```sh
 bluwofi --no-notify
 ```
 
-Bind that variant instead in your sway config if you'd rather not get
-toasts, e.g.:
+## Sway integration
 
+Add a key binding to:
+
+```text
+~/.config/sway/config
 ```
-bindsym $mod+b exec /path/to/bluwofi/target/release/bluwofi --no-notify
+
+Example:
+
+```ini
+bindsym $mod+b exec bluwofi
+```
+
+Without notifications:
+
+```ini
+bindsym $mod+b exec bluwofi --no-notify
 ```
 
 ## Waybar integration
 
-Run with `--status` for a one-shot JSON status line (no wofi menu opens):
+`bluwofi` can output a JSON status line:
 
 ```sh
 bluwofi --status
 ```
 
-Output looks like:
+Example:
 
 ```json
-{"text":"\uf293 AirPods Pro","tooltip":"AirPods Pro (82%)","class":"connected"}
+{
+  "text": "\uf293 AirPods Pro",
+  "tooltip": "AirPods Pro (82%)",
+  "class": "connected"
+}
 ```
 
-The `\uf293`/`\uf294` icons are Font Awesome glyphs (bluetooth on/off) — you need a
-Nerd Font or Font Awesome installed for them to render; otherwise waybar will
-show a blank box where the icon should be. Swap them for plain text/emoji in
-`print_status()` if you don't want to bother with icon fonts.
+The Bluetooth icons use Font Awesome glyphs. A Nerd Font or Font Awesome
+font is required for them to display correctly.
 
-Add a module to `~/.config/waybar/config`:
+Add a module to your Waybar configuration:
 
 ```jsonc
 "custom/bluetooth": {
-    "exec": "/path/to/bluwofi --status",
+    "exec": "bluwofi --status",
     "return-type": "json",
     "interval": 5,
-    "on-click": "/path/to/bluwofi",
+    "on-click": "bluwofi",
     "format": "{}"
 }
 ```
 
-Then add `"custom/bluetooth"` to one of the `modules-left`/`modules-center`/
-`modules-right` arrays in the same config. Clicking the module launches the
-normal interactive wofi menu; the bar itself just polls `--status` every 5
-seconds.
+Then add:
+
+```json
+"custom/bluetooth"
+```
+
+to one of:
+
+* `modules-left`
+* `modules-center`
+* `modules-right`
 
 ## Auto-reconnect daemon
 
-`cargo build --release` also produces a second binary,
-`target/release/bluetooth-reconnectd` — a small background service that
-polls every 20 seconds for devices that are paired + trusted but not
-currently connected, and retries connecting to them (8s timeout per
-device). Useful for things like earbuds that you want to just reconnect
-automatically when they come back in range, without opening the menu.
+The project includes a second binary:
 
-Run it manually to try it out:
-
-```sh
-./target/release/bluetooth-reconnectd
+```text
+bluetooth-reconnectd
 ```
 
-Leave it running in a terminal and watch the stderr log as you power your
-headphones on/off.
+The daemon periodically checks for devices that are:
 
-### Manual disconnects are respected
+* paired
+* trusted
+* currently disconnected
 
-If you disconnect a device through the interactive `bluwofi` menu,
-it writes a marker telling the daemon to leave that device alone for 2
-minutes (`RECONNECT_COOLDOWN_SECS` in `main.rs`), so it won't immediately
-reconnect something you just disconnected on purpose. Disconnects that
-happen for other reasons (device powered off, out of range) aren't
-affected — the daemon will just naturally fail to reconnect until the
-device is actually back.
+and attempts to reconnect them.
 
-### Running it as a systemd user service
-
-A unit file is provided at `systemd/bluetooth-reconnectd.service`. Edit
-the `ExecStart` path to match where you actually built the binary, then:
+Run it manually:
 
 ```sh
-mkdir -p ~/.config/systemd/user
-cp systemd/bluetooth-reconnectd.service ~/.config/systemd/user/
+bluetooth-reconnectd
+```
+
+### Manual disconnect handling
+
+Disconnecting a device from the `bluwofi` menu creates a cooldown marker.
+
+During this cooldown period, the daemon will not attempt to reconnect that
+device.
+
+This prevents reconnecting something that was intentionally disconnected.
+
+Disconnects caused by devices leaving range or powering off are not treated as
+manual disconnects.
+
+## Running as a systemd user service
+
+A service file is included:
+
+```text
+systemd/bluetooth-reconnectd.service
+```
+
+Enable it:
+
+```sh
 systemctl --user daemon-reload
 systemctl --user enable --now bluetooth-reconnectd
 ```
 
-Check it's running and see its logs:
+Check its status:
 
 ```sh
 systemctl --user status bluetooth-reconnectd
+```
+
+Follow logs:
+
+```sh
 journalctl --user -u bluetooth-reconnectd -f
 ```
 
-## Extending it
+## Possible improvements
 
-Some natural next steps if you want to go further:
+Some possible future additions:
 
-- **Per-device-type icons**: BlueZ reports a device class (headset,
-  mouse, phone...) that could map to distinct icons instead of the
-  generic connected/paired/available dots.
+* Per-device-type icons (headphones, mouse, phone, etc.)
+* Better battery reporting
+* Audio profile switching
+* More device filtering options
+* Additional configuration options
